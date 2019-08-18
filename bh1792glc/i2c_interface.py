@@ -17,7 +17,7 @@ class SensorDriver(object):
         self.i2c = smbus.SMBus(i2cBus)
         
     def write_block(self, addr, valarray = []):
-        self.i2c.write_byte(self.DEVICE_ADDRESS, addr)
+        #self.i2c.write_byte(self.DEVICE_ADDRESS, addr)
         #Wait tBUF here! 1.3us        #time.sleep(0.000002)
         return self.i2c.write_i2c_block_data(self.DEVICE_ADDRESS, addr, valarray)
         
@@ -33,8 +33,11 @@ class SensorDriver(object):
         arr = [ (val & 0xFF), ((val >> 8) & 0xFF), ((val >> 16) & 0xFF), ((val >> 24) & 0xFF)]
         return self.write_block(addr, arr)
         
+    def write_register(self, addr, val):
+        return self.write_byte(addr, val)
+        
     def read_block(self, addr, size):
-        self.i2c.write_byte(self.DEVICE_ADDRESS, addr)
+        #self.i2c.write_byte(self.DEVICE_ADDRESS, addr)
         #Wait tBUF here! 1.3us
         res = self.i2c.read_i2c_block_data(self.DEVICE_ADDRESS, addr, size)
         if len(res) != size:
