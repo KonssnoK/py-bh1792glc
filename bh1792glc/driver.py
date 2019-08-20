@@ -51,16 +51,15 @@ class BH1792GLCDriver(SensorDriver):
 
     def measure_sync_start( self, 
                             mode=b.BH1792GLC_MEAS_CONTROL1_MSR_64HZ,
-                            current= 10,
-                            threshold=0xFFFC):
-        # Set operation mode
+                            current= 10):
+        # Set 0x41 operation mode
         self.set_meas_mode(mode, b.BH1792GLC_MEAS_CONTROL1_SEL_ADC_GREEN)
         # Set 0x42
         self.set_led1_current(current)
         # Set 0x43
         self.set_led2_current(current)
-        # Set 0x44, 0x45
-        self.set_ir_threshold(threshold)
+        # Set 0x44, 0x45 -> Used only in non sync
+        self.set_ir_threshold(0xFFF0)
         # Set interrupt condition
         self.set_interrupt_mode(b.BH1792GLC_MEAS_CONTROL5_INT_SEL_FIFO_WATERMARK)
         # Start measurement
@@ -69,7 +68,7 @@ class BH1792GLCDriver(SensorDriver):
         self.sync_counter = 0
         self.measure_sync_ontick()
         
-    def measure_sync_ontick( self ):
+    def measure_sync_ontick( self, current = None ):
         #High priority
         if (get_time_ms() - self.last_sync_ms) >= 1000:
             #Synch each second
@@ -96,13 +95,24 @@ class BH1792GLCDriver(SensorDriver):
                 reads+=1
             # Read FIFO_LEV
             lev = self.read_register(r.BH1792GLC_FIFO_LEV)
-            # No changes in parameters
             
+            # New parameters?
+            # LED_CURRENT1and LED_CURRENT2 can be changed during measurement. 
+            # The value becomes effective when receiving MEAS_SYNC.
+            if current:
+                # Set 0x42
+                self.set_led1_current(current)
+                # Set 0x43
+                self.set_led2_current(current)
+                # Start measurement
+                self.write_register(r.BH1792GLC_MEAS_START, b.BH1792GLC_MEAS_START_MEAS_ST)
+                
             if (self.sync_counter == 2):
                 #We cleared the FIFO, no data
                 return []
             
             return [d0,d1]
+        
         
         return []
             
@@ -111,8 +121,7 @@ class BH1792GLCDriver(SensorDriver):
 
     def measure_single_get( self,
                             adc= b.BH1792GLC_MEAS_CONTROL1_SEL_ADC_GREEN,
-                            current= 10,
-                            threshold=0xFFFC):
+                            current= 10):
         # Set operation mode
         self.set_meas_mode(
             b.BH1792GLC_MEAS_CONTROL1_MSR_SINGLE_MEAS_MODE, 
@@ -121,8 +130,8 @@ class BH1792GLCDriver(SensorDriver):
         self.set_led1_current(current)
         # Set 0x43
         self.set_led2_current(current)
-        # Set 0x44, 0x45
-        self.set_ir_threshold(threshold)
+        # Set 0x44, 0x45 -> Used only in non sync
+        self.set_ir_threshold(0xFFF0)
         # Set interrupt condition
         self.set_interrupt_mode(b.BH1792GLC_MEAS_CONTROL5_INT_SEL_ON_COMPLETE)
         # Start measurement
@@ -151,15 +160,59 @@ class BH1792GLCDriver(SensorDriver):
         
         return [val_off, val_on]
         
-
-    def set_nonsync_measurement(self, current=40, threshold=0xffff):
-        self.reset()
-        self.set_meas_mode(b.BH1792GLC_MEAS_CONTROL1_MSR_NON_SYNCH_MODE,
-                           b.BH1792GLC_MEAS_CONTROL1_SEL_ADC_IR)
+    def measure_nonsync_start( self,
+                            current= 40,
+                            threshold=0x300):
+        """ Non synchronized mode is only done using IR
+            threshold = Compare IRDATA_LEDON[15:4] and TH_IR[15:4] when updating data. 
+                        Interruption occurs when IRDATA_LEDON[15:4] is TH_IR[15:4] or more.
+                        
+            Returns:
+                - IR Data Count Value during no LED emission
+                - IR Data Count Value during LED emission – IR Data Count Value during no LED emission 
+        """
+        # Set operation mode
+        self.set_meas_mode(
+            b.BH1792GLC_MEAS_CONTROL1_MSR_NON_SYNCH_MODE, 
+            b.BH1792GLC_MEAS_CONTROL1_SEL_ADC_IR )
+        # Set 0x42
+        self.set_led1_current(current)
+        # Set 0x43
         self.set_led2_current(current)
-        self.set_interrupt_mode(b.BH1792GLC_MEAS_CONTROL5_INT_SEL_IR_THRESHOLD)
+        # Set 0x44, 0x45
         self.set_ir_threshold(threshold)
+        # Set interrupt condition
+        self.set_interrupt_mode(b.BH1792GLC_MEAS_CONTROL5_INT_SEL_IR_THRESHOLD)
+        # Start measurement
+        self.write_register(r.BH1792GLC_MEAS_START, b.BH1792GLC_MEAS_START_MEAS_ST)
+        
+    def measure_nonsync_ontick( self, current = None ):
+        #if interrupt raised
+        if not GPIO.input(self.int_gpio):
+            # Read 0x50 to 0x53
+            val_off = self.read_short(r.BH1792GLC_IRDATA_LEDOFF_LSB)
+            val_on = self.read_short(r.BH1792GLC_IRDATA_LEDON_LSB)
 
+            # Clear interrupt 0x58
+            self.read_register(r.BH1792GLC_INT_CLEAR)
+            
+            return [val_off, val_on]
+        else:
+            # New parameters?
+            # LED_CURRENT1 and LED_CURRENT2 can be changed during measurement. 
+            # New value becomes effective when receiving MEAS_ST.
+            if current:
+                # Set 0x42
+                self.set_led1_current(current)
+                # Set 0x43
+                self.set_led2_current(current)
+                # TODO: Threshold ??
+                # Start measurement
+                self.write_register(r.BH1792GLC_MEAS_START, b.BH1792GLC_MEAS_START_MEAS_ST)
+        return []
+            
+    def measure_nonsync_stop( self ):
+        self.reset()
 
     # Set registers 
 
