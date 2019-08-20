@@ -14,9 +14,9 @@ def main():
     
     #do_single(drv)
     
-    #do_sync(drv)
+    do_sync(drv)
     
-    do_nonsync(drv)
+    #do_nonsync(drv)
     
 def do_single(drv):
     
@@ -27,7 +27,7 @@ def do_single(drv):
 def do_sync(drv):
     print("Synchronized acquisition")
     # Test synchronized measurement to work
-    drv.measure_sync_start()
+    drv.measure_sync_start(current = 1)
     
     start_time = time.time()
     while True:

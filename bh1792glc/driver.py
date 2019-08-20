@@ -86,12 +86,12 @@ class BH1792GLCDriver(SensorDriver):
         if (not GPIO.input(self.int_gpio) or (self.sync_counter == 2)):
             # Read from the FIFO
             reads = 0
-            d0 = []
-            d1 = []
+            val_off = []
+            val_on = []
             while reads < 32:
                 #read FIFO 0x4C to 0x4F
-                d0.append(self.read_short(r.BH1792GLC_FIFODATA0_LSB))
-                d1.append(self.read_short(r.BH1792GLC_FIFODATA1_LSB))
+                val_off.append(self.read_short(r.BH1792GLC_FIFODATA0_LSB)) # LED OFF
+                val_on.append(self.read_short(r.BH1792GLC_FIFODATA1_LSB)) # LED ON
                 reads+=1
             # Read FIFO_LEV
             lev = self.read_register(r.BH1792GLC_FIFO_LEV)
@@ -111,7 +111,7 @@ class BH1792GLCDriver(SensorDriver):
                 #We cleared the FIFO, no data
                 return []
             
-            return [d0,d1]
+            return [val_off, val_on]
         
         
         return []
