@@ -11,3 +11,9 @@ pip install smbus
 
 # Example
 - See test.py
+
+# Enable i2c.0
+I2C-0 is disabled by default. To enable it, you'll need to manually edit the configuration file.
+Edit /boot/config.txt, and add the following line.
+
+dtparam=i2c_vc=on

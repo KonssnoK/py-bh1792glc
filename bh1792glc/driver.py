@@ -15,13 +15,13 @@ e = bh1792glc_registers.enums()
 
 get_time_ms = lambda: int(round(time.time() * 1000))
 
-class BH1792GLCDriver(SensorDriver):
+class BH1792GLCDriver(i2cInterface):
 
-    def __init__(self, int_gpio = 17):
+    def __init__(self, int_gpio = 17, i2cBus = 1):
         """ GPIO is the pin 
         """
     
-        SensorDriver.__init__(self, 0x5B, 1)
+        i2cInterface.__init__(self, 0x5B, i2cBus)
         self.name = 'BH1792GLC'
         self._registers = dict(r.__dict__)
         self._dump_range = (r.BH1792GLC_REGISTER_DUMP_START,

@@ -2,7 +2,7 @@ import time
 import smbus
 import struct
 
-class SensorDriver(object):
+class i2cInterface(object):
     
     def __init__(self, deviceAddress, i2cBus = 1):
         if i2cBus > 1 or i2cBus < 0:
