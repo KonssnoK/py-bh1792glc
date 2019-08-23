@@ -68,6 +68,17 @@ class BH1792GLCDriver(i2cInterface):
         self.sync_counter = 0
         self.measure_sync_ontick()
         
+        
+    def measure_sync_ext_ontick( self, current = None, dosync = False ):
+        #High priority
+        if dosync:
+            #Synch each second
+            self.write_register(r.BH1792GLC_MEAS_SYNC, b.BH1792GLC_MEAS_SYNC_MEAS_SYNC)
+
+            self.sync_counter+=1
+        
+        return self.measure_sync_internal(current)
+        
     def measure_sync_ontick( self, current = None ):
         #High priority
         if (get_time_ms() - self.last_sync_ms) >= 1000:
@@ -76,6 +87,10 @@ class BH1792GLCDriver(i2cInterface):
             self.last_sync_ms = get_time_ms()
             
             self.sync_counter+=1
+            
+        return self.measure_sync_internal(current)
+            
+    def measure_sync_internal(self, current):
             
         #Ignore the interrupt before third cycle
         if self.sync_counter < 2:
