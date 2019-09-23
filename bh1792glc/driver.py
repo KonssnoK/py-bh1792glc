@@ -99,17 +99,25 @@ class BH1792GLCDriver(i2cInterface):
         #Low priority
         #if interrupt raised or we need to clear the FIFO
         if (not GPIO.input(self.int_gpio) or (self.sync_counter == 2)):
+        #lev = self.read_register(r.BH1792GLC_FIFO_LEV)
+        #if lev > 0:
             # Read from the FIFO
             reads = 0
             val_off = []
             val_on = []
-            while reads < 32:
+            
+            lev = self.read_register(r.BH1792GLC_FIFO_LEV)
+            #if (self.sync_counter > 2):
+            #    print("FIFO LEV ", lev, " count", self.sync_counter, " GPIO", GPIO.input(self.int_gpio) )
+            
+            while reads < lev:
                 #read FIFO 0x4C to 0x4F
+                # Not reading both reagisters does not consume fifo
                 val_off.append(self.read_short(r.BH1792GLC_FIFODATA0_LSB)) # LED OFF
                 val_on.append(self.read_short(r.BH1792GLC_FIFODATA1_LSB)) # LED ON
                 reads+=1
             # Read FIFO_LEV
-            lev = self.read_register(r.BH1792GLC_FIFO_LEV)
+            #lev = self.read_register(r.BH1792GLC_FIFO_LEV)
             
             # New parameters?
             # LED_CURRENT1and LED_CURRENT2 can be changed during measurement. 
